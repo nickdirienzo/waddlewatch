@@ -14,10 +14,14 @@
       <tr>
         <td class="code">{{ .StartTime.Format "2006-01-02 15:04:05.000Z" }}</td>
         <td>{{ printf "%.2f" .DurationMs }}</td>
-        <td>{{ .Service }}</td>
+        <td>
+          {{ if .Service }}<a class="filter-link" data-field="service" data-value="{{ .Service }}">{{ .Service }}</a>{{ end }}
+        </td>
         <td>{{ .SpanName }}</td>
         <td class="sev-{{ .StatusCode }}">{{ .StatusCode }}</td>
-        <td class="code">{{ .TraceID }}</td>
+        <td class="code">
+          {{ if .TraceID }}<a class="filter-link" data-field="trace_id" data-value="{{ .TraceID }}">{{ .TraceID }}</a>{{ end }}
+        </td>
         <td class="code">{{ .SpanID }}</td>
       </tr>
       {{ end }}

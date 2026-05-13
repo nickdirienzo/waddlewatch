@@ -1,3 +1,15 @@
+{{ define "presets" }}
+<label class="presets">Quick range
+  <span class="preset-btns">
+    <button type="button" class="preset-btn" data-range="5m">5m</button>
+    <button type="button" class="preset-btn" data-range="15m">15m</button>
+    <button type="button" class="preset-btn" data-range="1h">1h</button>
+    <button type="button" class="preset-btn" data-range="24h">24h</button>
+    <button type="button" class="preset-btn" data-range="7d">7d</button>
+  </span>
+</label>
+{{ end }}
+
 {{ define "layout" }}
 <!doctype html>
 <html lang="en">
@@ -6,6 +18,7 @@
   <title>{{ .Title }} — Waddlewatch</title>
   <link rel="stylesheet" href="/static/waddlewatch.css">
   <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/waddlewatch.js" defer></script>
   {{ if .NeedsChart }}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>{{ end }}
 </head>
 <body>

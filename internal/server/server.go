@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -73,6 +74,7 @@ func (s *Server) Routes() http.Handler {
 	r.Get("/logs/rows", s.handleLogsRows)
 
 	r.Get("/metrics", s.handleMetricsPage)
+	r.Get("/metrics/list", s.handleMetricsList)
 	r.Get("/metrics/chart", s.handleMetricsChart)
 
 	r.Get("/traces", s.handleTracesPage)
@@ -126,8 +128,10 @@ func (s *Server) handleLogsPage(w http.ResponseWriter, r *http.Request) {
 		"From":       q.Get("from"),
 		"To":         q.Get("to"),
 		"Service":    q.Get("service"),
+		"Severity":   q.Get("severity"),
 		"Search":     q.Get("search"),
 		"Services":   services,
+		"Severities": []string{"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"},
 		"Query":      encodeQuery(q),
 	}
 	s.render(w, r, "logs", data)
@@ -141,10 +145,11 @@ func (s *Server) handleLogsRows(w http.ResponseWriter, r *http.Request) {
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	rows, err := query.Logs(r.Context(), s.deps.Store.DB(), query.LogsQuery{
-		Range:   rng,
-		Service: r.URL.Query().Get("service"),
-		Search:  r.URL.Query().Get("search"),
-		Limit:   limit,
+		Range:    rng,
+		Service:  r.URL.Query().Get("service"),
+		Severity: r.URL.Query().Get("severity"),
+		Search:   r.URL.Query().Get("search"),
+		Limit:    limit,
 	})
 	if err != nil {
 		s.renderPartial(w, r, "logs_rows", map[string]any{"Error": err.Error()})
@@ -154,7 +159,6 @@ func (s *Server) handleLogsRows(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleMetricsPage(w http.ResponseWriter, r *http.Request) {
-	services, _ := query.Services(r.Context(), s.deps.Store.DB(), "otel_metrics")
 	q := r.URL.Query()
 	bucket := q.Get("bucket")
 	if bucket == "" {
@@ -166,13 +170,44 @@ func (s *Server) handleMetricsPage(w http.ResponseWriter, r *http.Request) {
 		"NeedsChart": true,
 		"From":       q.Get("from"),
 		"To":         q.Get("to"),
-		"Service":    q.Get("service"),
-		"MetricName": q.Get("name"),
 		"BucketSecs": bucket,
-		"Services":   services,
+		"Selected":   q["series"],
 		"Query":      encodeQuery(q),
 	}
 	s.render(w, r, "metrics", data)
+}
+
+func (s *Server) handleMetricsList(w http.ResponseWriter, r *http.Request) {
+	rng, err := query.ParseRange(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
+	if err != nil {
+		s.renderPartial(w, r, "metrics_list", map[string]any{"Error": err.Error()})
+		return
+	}
+	items, err := query.MetricSeriesList(r.Context(), s.deps.Store.DB(), rng)
+	if err != nil {
+		s.renderPartial(w, r, "metrics_list", map[string]any{"Error": err.Error()})
+		return
+	}
+	selected := map[string]bool{}
+	for _, k := range r.URL.Query()["series"] {
+		selected[k] = true
+	}
+	type item struct {
+		Key      string
+		Service  string
+		Name     string
+		Count    int64
+		Selected bool
+	}
+	listItems := make([]item, 0, len(items))
+	for _, it := range items {
+		key := it.Service + "/" + it.Name
+		listItems = append(listItems, item{
+			Key: key, Service: it.Service, Name: it.Name,
+			Count: it.Count, Selected: selected[key],
+		})
+	}
+	s.renderPartial(w, r, "metrics_list", map[string]any{"Items": listItems})
 }
 
 func (s *Server) handleMetricsChart(w http.ResponseWriter, r *http.Request) {
@@ -185,11 +220,18 @@ func (s *Server) handleMetricsChart(w http.ResponseWriter, r *http.Request) {
 	if bucketSecs <= 0 {
 		bucketSecs = 60
 	}
+	var seriesKeys []query.SeriesKey
+	for _, raw := range r.URL.Query()["series"] {
+		parts := strings.SplitN(raw, "/", 2)
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			continue
+		}
+		seriesKeys = append(seriesKeys, query.SeriesKey{Service: parts[0], Name: parts[1]})
+	}
 	rows, err := query.Metrics(r.Context(), s.deps.Store.DB(), query.MetricsQuery{
-		Range:   rng,
-		Service: r.URL.Query().Get("service"),
-		Name:    r.URL.Query().Get("name"),
-		Bucket:  time.Duration(bucketSecs) * time.Second,
+		Range:  rng,
+		Series: seriesKeys,
+		Bucket: time.Duration(bucketSecs) * time.Second,
 	})
 	if err != nil {
 		s.renderPartial(w, r, "metrics_chart", map[string]any{"Error": err.Error()})
@@ -260,6 +302,27 @@ func (s *Server) handleTracesPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleTracesRows(w http.ResponseWriter, r *http.Request) {
+	traceID := r.URL.Query().Get("trace_id")
+	if traceID != "" {
+		spans, err := query.TraceSpans(r.Context(), s.deps.Store.DB(), traceID)
+		if err != nil {
+			s.renderPartial(w, r, "trace_detail", map[string]any{"Error": err.Error()})
+			return
+		}
+		nodes, start, end := traceTree(spans)
+		var totalMs float64
+		if !start.IsZero() {
+			totalMs = float64(end.Sub(start)) / float64(time.Millisecond)
+		}
+		s.renderPartial(w, r, "trace_detail", map[string]any{
+			"TraceID":   traceID,
+			"Nodes":     nodes,
+			"TotalMs":   totalMs,
+			"SpanCount": len(spans),
+		})
+		return
+	}
+
 	rng, err := query.ParseRange(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
 		s.renderPartial(w, r, "traces_rows", map[string]any{"Error": err.Error()})
@@ -268,7 +331,6 @@ func (s *Server) handleTracesRows(w http.ResponseWriter, r *http.Request) {
 	rows, err := query.Traces(r.Context(), s.deps.Store.DB(), query.TracesQuery{
 		Range:   rng,
 		Service: r.URL.Query().Get("service"),
-		TraceID: r.URL.Query().Get("trace_id"),
 	})
 	if err != nil {
 		s.renderPartial(w, r, "traces_rows", map[string]any{"Error": err.Error()})

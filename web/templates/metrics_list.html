@@ -1,0 +1,25 @@
+{{ define "metrics_list" }}
+{{ if .Error }}
+  <div class="error">{{ .Error }}</div>
+{{ else if not .Items }}
+  <div class="empty">No metric series in this range.</div>
+{{ else }}
+  <form id="metrics-series"
+        hx-get="/metrics/chart"
+        hx-target="#metrics-chart"
+        hx-trigger="change, load"
+        hx-include="#metrics-time">
+    <ul class="series-list">
+      {{ range .Items }}
+        <li>
+          <label>
+            <input type="checkbox" name="series" value="{{ .Key }}" {{ if .Selected }}checked{{ end }}>
+            <span class="series-name"><span class="series-svc">{{ .Service }}</span> / {{ .Name }}</span>
+            <span class="series-count">{{ .Count }}</span>
+          </label>
+        </li>
+      {{ end }}
+    </ul>
+  </form>
+{{ end }}
+{{ end }}

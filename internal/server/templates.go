@@ -25,8 +25,10 @@ var pageTemplates = map[string]string{
 // partialTemplates maps a partial name (the `define` name) to its file.
 var partialTemplates = map[string]string{
 	"logs_rows":     "logs_rows.html",
+	"metrics_list":  "metrics_list.html",
 	"metrics_chart": "metrics_chart.html",
 	"traces_rows":   "traces_rows.html",
+	"trace_detail":  "trace_detail.html",
 }
 
 func parseTemplates(filesystem fs.FS) (*templateSet, error) {

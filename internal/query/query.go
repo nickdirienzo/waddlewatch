@@ -51,10 +51,11 @@ type LogRow struct {
 
 // LogsQuery wraps the filter options for /logs.
 type LogsQuery struct {
-	Range   Range
-	Service string
-	Search  string
-	Limit   int
+	Range    Range
+	Service  string
+	Severity string
+	Search   string
+	Limit    int
 }
 
 // Logs returns matching log rows ordered newest-first.
@@ -67,6 +68,10 @@ func Logs(ctx context.Context, db *sql.DB, q LogsQuery) ([]LogRow, error) {
 	if q.Service != "" {
 		where = append(where, "service_name = ?")
 		args = append(args, q.Service)
+	}
+	if q.Severity != "" {
+		where = append(where, "severity_text = ?")
+		args = append(args, q.Severity)
 	}
 	if q.Search != "" {
 		where = append(where, "body ILIKE ?")
@@ -104,16 +109,26 @@ type MetricRow struct {
 	Value   float64
 }
 
-// MetricsQuery filters /metrics.
-type MetricsQuery struct {
-	Range   Range
+// SeriesKey identifies one metric series.
+type SeriesKey struct {
 	Service string
 	Name    string
-	Bucket  time.Duration
 }
 
-// Metrics returns metric points bucketed by Bucket (defaults to 1 minute).
+// MetricsQuery filters /metrics. When Series is empty, Metrics returns no rows.
+type MetricsQuery struct {
+	Range  Range
+	Series []SeriesKey
+	Bucket time.Duration
+}
+
+// Metrics returns metric points bucketed by Bucket (defaults to 1 minute) for
+// the requested series. Empty Series returns no rows — the explorer view
+// requires the user to pick what to plot.
 func Metrics(ctx context.Context, db *sql.DB, q MetricsQuery) ([]MetricRow, error) {
+	if len(q.Series) == 0 {
+		return nil, nil
+	}
 	if q.Bucket <= 0 {
 		q.Bucket = time.Minute
 	}
@@ -122,26 +137,23 @@ func Metrics(ctx context.Context, db *sql.DB, q MetricsQuery) ([]MetricRow, erro
 		bucketSecs = 60
 	}
 
-	where := []string{"timestamp >= ? AND timestamp < ?"}
+	conds := make([]string, 0, len(q.Series))
 	args := []any{q.Range.Start, q.Range.End}
-	if q.Service != "" {
-		where = append(where, "service_name = ?")
-		args = append(args, q.Service)
+	for _, s := range q.Series {
+		conds = append(conds, "(service_name = ? AND metric_name = ?)")
+		args = append(args, s.Service, s.Name)
 	}
-	if q.Name != "" {
-		where = append(where, "metric_name = ?")
-		args = append(args, q.Name)
-	}
+
 	sqlStmt := fmt.Sprintf(`
 		SELECT time_bucket(INTERVAL %d SECOND, timestamp) AS bucket,
 		       COALESCE(service_name,''),
 		       COALESCE(metric_name,''),
 		       AVG(value) AS value
 		FROM otel_metrics
-		WHERE %s
+		WHERE timestamp >= ? AND timestamp < ? AND (%s)
 		GROUP BY bucket, service_name, metric_name
 		ORDER BY bucket ASC
-		LIMIT 5000`, bucketSecs, strings.Join(where, " AND "))
+		LIMIT 5000`, bucketSecs, strings.Join(conds, " OR "))
 
 	rows, err := db.QueryContext(ctx, sqlStmt, args...)
 	if err != nil {
@@ -152,6 +164,42 @@ func Metrics(ctx context.Context, db *sql.DB, q MetricsQuery) ([]MetricRow, erro
 	for rows.Next() {
 		var r MetricRow
 		if err := rows.Scan(&r.Bucket, &r.Service, &r.Name, &r.Value); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// MetricSeriesRow describes one available (service, metric_name) pair in a
+// time window, with how many raw points fell in that window.
+type MetricSeriesRow struct {
+	Service string
+	Name    string
+	Count   int64
+}
+
+// MetricSeriesList returns the available series in the time range, sorted by
+// row count desc so the noisiest metrics surface first.
+func MetricSeriesList(ctx context.Context, db *sql.DB, rng Range) ([]MetricSeriesRow, error) {
+	sqlStmt := `
+		SELECT COALESCE(service_name,'') AS svc,
+		       COALESCE(metric_name,'') AS name,
+		       COUNT(*) AS c
+		FROM otel_metrics
+		WHERE timestamp >= ? AND timestamp < ?
+		GROUP BY svc, name
+		ORDER BY c DESC, svc, name
+		LIMIT 500`
+	rows, err := db.QueryContext(ctx, sqlStmt, rng.Start, rng.End)
+	if err != nil {
+		return nil, fmt.Errorf("listing metric series: %w", err)
+	}
+	defer rows.Close()
+	var out []MetricSeriesRow
+	for rows.Next() {
+		var r MetricSeriesRow
+		if err := rows.Scan(&r.Service, &r.Name, &r.Count); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
@@ -218,6 +266,50 @@ func Traces(ctx context.Context, db *sql.DB, q TracesQuery) ([]TraceRow, error) 
 			return nil, err
 		}
 		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// TraceSpan is one span returned for the detail view.
+type TraceSpan struct {
+	StartTime    time.Time
+	EndTime      time.Time
+	SpanID       string
+	ParentSpanID string
+	Service      string
+	SpanName     string
+	SpanKind     string
+	StatusCode   string
+	DurationMs   float64
+}
+
+// TraceSpans returns every span belonging to a trace ordered by start time.
+func TraceSpans(ctx context.Context, db *sql.DB, traceID string) ([]TraceSpan, error) {
+	if traceID == "" {
+		return nil, nil
+	}
+	sqlStmt := `
+		SELECT start_time, end_time, COALESCE(span_id,''), COALESCE(parent_span_id,''),
+		       COALESCE(service_name,''), COALESCE(span_name,''),
+		       COALESCE(span_kind,''), COALESCE(status_code,''),
+		       duration_ns / 1e6 AS duration_ms
+		FROM otel_traces
+		WHERE trace_id = ?
+		ORDER BY start_time ASC
+		LIMIT 5000`
+	rows, err := db.QueryContext(ctx, sqlStmt, traceID)
+	if err != nil {
+		return nil, fmt.Errorf("loading trace %s: %w", traceID, err)
+	}
+	defer rows.Close()
+	var out []TraceSpan
+	for rows.Next() {
+		var s TraceSpan
+		if err := rows.Scan(&s.StartTime, &s.EndTime, &s.SpanID, &s.ParentSpanID,
+			&s.Service, &s.SpanName, &s.SpanKind, &s.StatusCode, &s.DurationMs); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
 	}
 	return out, rows.Err()
 }

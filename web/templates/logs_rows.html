@@ -13,10 +13,16 @@
       {{ range .Rows }}
       <tr>
         <td class="code">{{ .Timestamp.Format "2006-01-02 15:04:05.000Z" }}</td>
-        <td>{{ .Service }}</td>
-        <td class="sev-{{ .Severity }}">{{ .Severity }}</td>
+        <td>
+          {{ if .Service }}<a class="filter-link" data-field="service" data-value="{{ .Service }}">{{ .Service }}</a>{{ end }}
+        </td>
+        <td class="sev-{{ .Severity }}">
+          {{ if .Severity }}<a class="filter-link" data-field="severity" data-value="{{ .Severity }}">{{ .Severity }}</a>{{ end }}
+        </td>
         <td>{{ .Body }}</td>
-        <td class="code">{{ .TraceID }}</td>
+        <td class="code">
+          {{ if .TraceID }}<a class="trace-link" href="/traces?trace_id={{ .TraceID }}" title="Show this trace">{{ .TraceID }}</a>{{ end }}
+        </td>
       </tr>
       {{ end }}
     </tbody>

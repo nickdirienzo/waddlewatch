@@ -1,0 +1,40 @@
+{{ define "trace_detail" }}
+{{ if .Error }}
+  <div class="error">{{ .Error }}</div>
+{{ else if not .Nodes }}
+  <div class="empty">No spans found for trace <span class="code">{{ .TraceID }}</span>.</div>
+{{ else }}
+  <div class="trace-header">
+    <div>
+      <span class="trace-label">trace</span>
+      <span class="code">{{ .TraceID }}</span>
+    </div>
+    <div class="trace-stats">
+      <span>{{ .SpanCount }} spans</span>
+      <span>{{ printf "%.2f" .TotalMs }} ms total</span>
+      <a class="back-link" href="/traces">← back to list</a>
+    </div>
+  </div>
+  <table class="trace-tree">
+    <thead>
+      <tr><th>span</th><th>service</th><th>status</th><th>duration</th><th>timeline</th></tr>
+    </thead>
+    <tbody>
+      {{ range .Nodes }}
+      <tr>
+        <td style="padding-left: {{ .IndentPx }}px" class="span-cell">
+          {{ if gt .Depth 0 }}<span class="tree-glyph">└─ </span>{{ end }}{{ .Span.SpanName }}
+        </td>
+        <td>{{ .Span.Service }}</td>
+        <td class="sev-{{ .Span.StatusCode }}">{{ .Span.StatusCode }}</td>
+        <td class="code">{{ printf "%.2f" .Span.DurationMs }} ms</td>
+        <td class="bar-cell">
+          <div class="span-bar" style="margin-left: {{ printf "%.3f" .OffsetPct }}%; width: {{ printf "%.3f" .WidthPct }}%;"
+               title="{{ printf "%.2f" .Span.DurationMs }} ms"></div>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+{{ end }}
+{{ end }}
