@@ -1,0 +1,62 @@
+{{ define "content" }}
+<form class="filters"
+      hx-get="/metrics/chart"
+      hx-target="#metrics-chart"
+      hx-trigger="submit, change from:#service, change from:#name">
+  <label>From
+    <input type="text" name="from" value="{{ .From }}" placeholder="2026-05-13T10:00:00Z">
+  </label>
+  <label>To
+    <input type="text" name="to" value="{{ .To }}" placeholder="2026-05-13T11:00:00Z">
+  </label>
+  <label>Service
+    <select id="service" name="service">
+      <option value="">all</option>
+      {{ range .Services }}<option value="{{ . }}" {{ if eq . $.Service }}selected{{ end }}>{{ . }}</option>{{ end }}
+    </select>
+  </label>
+  <label>Metric name
+    <input id="name" type="text" name="name" value="{{ .MetricName }}" placeholder="http.requests">
+  </label>
+  <label>Bucket seconds
+    <input type="number" name="bucket" value="{{ .BucketSecs }}" min="5" max="3600">
+  </label>
+  <button type="submit">Plot</button>
+</form>
+
+<canvas id="metrics-canvas" height="120"></canvas>
+<div id="metrics-chart" hx-get="/metrics/chart{{ .Query }}" hx-trigger="load"></div>
+
+<script>
+(function () {
+  let chart = null;
+  document.body.addEventListener('htmx:afterSwap', function (evt) {
+    if (evt.target.id !== 'metrics-chart') return;
+    const data = evt.target.querySelector('script[type="application/json"]');
+    if (!data) return;
+    const payload = JSON.parse(data.textContent);
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById('metrics-canvas').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: payload.labels,
+        datasets: payload.series.map(function (s, i) {
+          return {
+            label: s.name,
+            data: s.values,
+            borderWidth: 1.5,
+            tension: 0.2,
+            pointRadius: 1
+          };
+        })
+      },
+      options: {
+        responsive: true,
+        scales: { x: { ticks: { autoSkip: true, maxTicksLimit: 12 } } },
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  });
+})();
+</script>
+{{ end }}

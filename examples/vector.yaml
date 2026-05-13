@@ -1,0 +1,44 @@
+# Example Vector config that accepts OTLP and writes Parquet files into the
+# layout Waddlewatch expects. Adjust paths for your deployment.
+#
+# Run with:
+#   vector --config examples/vector.yaml
+
+sources:
+  otlp_grpc:
+    type: opentelemetry
+    grpc:
+      address: 0.0.0.0:4317
+    http:
+      address: 0.0.0.0:4318
+
+transforms:
+  route_signal:
+    type: route
+    inputs: [otlp_grpc.logs, otlp_grpc.metrics, otlp_grpc.traces]
+    route:
+      logs: '.signal == "logs"'
+      metrics: '.signal == "metrics"'
+      traces: '.signal == "traces"'
+
+sinks:
+  logs_parquet:
+    type: file
+    inputs: [otlp_grpc.logs]
+    path: /var/lib/waddlewatch/parquet/logs/%Y-%m-%d/logs-%H-%M.parquet
+    encoding:
+      codec: parquet
+
+  metrics_parquet:
+    type: file
+    inputs: [otlp_grpc.metrics]
+    path: /var/lib/waddlewatch/parquet/metrics/%Y-%m-%d/metrics-%H-%M.parquet
+    encoding:
+      codec: parquet
+
+  traces_parquet:
+    type: file
+    inputs: [otlp_grpc.traces]
+    path: /var/lib/waddlewatch/parquet/traces/%Y-%m-%d/traces-%H-%M.parquet
+    encoding:
+      codec: parquet

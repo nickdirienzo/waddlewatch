@@ -1,0 +1,24 @@
+{{ define "content" }}
+<section>
+  <h1>Welcome.</h1>
+  <p class="summary">Waddlewatch is watching {{ .StoragePath }}. Catalog at {{ .CatalogPath }}.</p>
+  <div class="landing-cards">
+    <a class="landing-card" href="/logs">
+      <h2>Logs</h2>
+      <p>Search and filter structured logs by service, severity, and body content.</p>
+    </a>
+    <a class="landing-card" href="/metrics">
+      <h2>Metrics</h2>
+      <p>Plot bucketed metric points over a time range. Average per minute, one chart.</p>
+    </a>
+    <a class="landing-card" href="/traces">
+      <h2>Traces</h2>
+      <p>Flat span table, sorted by start time. Filter by service or trace id.</p>
+    </a>
+    <a class="landing-card" href="/tail">
+      <h2>Live tail</h2>
+      <p>Stream the newest log lines as they land in the catalog.</p>
+    </a>
+  </div>
+</section>
+{{ end }}

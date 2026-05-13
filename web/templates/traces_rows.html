@@ -1,0 +1,27 @@
+{{ define "traces_rows" }}
+{{ if .Error }}
+  <div class="error">{{ .Error }}</div>
+{{ else if not .Rows }}
+  <div class="empty">No spans matched these filters.</div>
+{{ else }}
+  <div class="summary">{{ len .Rows }} spans</div>
+  <table>
+    <thead>
+      <tr><th>start</th><th>duration ms</th><th>service</th><th>span</th><th>status</th><th>trace</th><th>span id</th></tr>
+    </thead>
+    <tbody>
+      {{ range .Rows }}
+      <tr>
+        <td class="code">{{ .StartTime.Format "2006-01-02 15:04:05.000Z" }}</td>
+        <td>{{ printf "%.2f" .DurationMs }}</td>
+        <td>{{ .Service }}</td>
+        <td>{{ .SpanName }}</td>
+        <td class="sev-{{ .StatusCode }}">{{ .StatusCode }}</td>
+        <td class="code">{{ .TraceID }}</td>
+        <td class="code">{{ .SpanID }}</td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+{{ end }}
+{{ end }}

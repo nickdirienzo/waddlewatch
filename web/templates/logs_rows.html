@@ -1,0 +1,25 @@
+{{ define "logs_rows" }}
+{{ if .Error }}
+  <div class="error">{{ .Error }}</div>
+{{ else if not .Rows }}
+  <div class="empty">No logs matched these filters.</div>
+{{ else }}
+  <div class="summary">{{ len .Rows }} rows</div>
+  <table>
+    <thead>
+      <tr><th>timestamp</th><th>service</th><th>severity</th><th>body</th><th>trace</th></tr>
+    </thead>
+    <tbody>
+      {{ range .Rows }}
+      <tr>
+        <td class="code">{{ .Timestamp.Format "2006-01-02 15:04:05.000Z" }}</td>
+        <td>{{ .Service }}</td>
+        <td class="sev-{{ .Severity }}">{{ .Severity }}</td>
+        <td>{{ .Body }}</td>
+        <td class="code">{{ .TraceID }}</td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+{{ end }}
+{{ end }}

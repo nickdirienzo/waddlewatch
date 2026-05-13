@@ -1,0 +1,10 @@
+{{ define "metrics_chart" }}
+{{ if .Error }}
+  <div class="error">{{ .Error }}</div>
+{{ else if not .Series }}
+  <div class="empty">No metric points matched.</div>
+{{ else }}
+  <div class="summary">{{ .PointCount }} points across {{ len .Series }} series</div>
+  <script type="application/json">{{ .JSON }}</script>
+{{ end }}
+{{ end }}

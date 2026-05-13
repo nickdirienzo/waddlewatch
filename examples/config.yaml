@@ -1,0 +1,24 @@
+# Waddlewatch example config.
+# Bind to localhost. Do not expose this on an untrusted network.
+
+listen: 127.0.0.1:8080
+
+# Vector writes Parquet files here, organised into logs/, metrics/, traces/
+# subdirectories. Waddlewatch polls the tree on a timer.
+storage_path: /var/lib/waddlewatch/parquet
+
+# DuckLake catalog (SQLite-backed) plus the directory where DuckLake puts its
+# internal data files. Both must live on a persistent volume.
+catalog_path: /var/lib/waddlewatch/catalog.sqlite
+data_path: /var/lib/waddlewatch/data
+
+# How often to scan storage_path for new parquet files.
+poll_interval: 60s
+
+# Optional S3 storage. When bucket is set, storage_path is ignored and
+# Waddlewatch reads parquet files directly from S3.
+# s3:
+#   bucket: waddlewatch-otel
+#   region: us-east-1
+#   prefix: prod/
+#   endpoint: https://s3.us-east-1.amazonaws.com

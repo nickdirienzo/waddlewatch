@@ -1,0 +1,27 @@
+{{ define "layout" }}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ .Title }} — Waddlewatch</title>
+  <link rel="stylesheet" href="/static/waddlewatch.css">
+  <script src="/static/htmx.min.js" defer></script>
+  {{ if .NeedsChart }}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>{{ end }}
+</head>
+<body>
+  <header>
+    <div class="brand">Waddlewatch</div>
+    <nav>
+      <a href="/" class="{{ if eq .Page "home" }}active{{ end }}">Home</a>
+      <a href="/logs" class="{{ if eq .Page "logs" }}active{{ end }}">Logs</a>
+      <a href="/metrics" class="{{ if eq .Page "metrics" }}active{{ end }}">Metrics</a>
+      <a href="/traces" class="{{ if eq .Page "traces" }}active{{ end }}">Traces</a>
+      <a href="/tail" class="{{ if eq .Page "tail" }}active{{ end }}">Live tail</a>
+    </nav>
+  </header>
+  <main>
+    {{ template "content" . }}
+  </main>
+</body>
+</html>
+{{ end }}

@@ -1,0 +1,8 @@
+{{ define "content" }}
+<section>
+  <h2>Live tail</h2>
+  <p class="summary">Polls the catalog for new log rows every 2 seconds.</p>
+  <div id="tail-output" hx-ext="sse" sse-connect="/tail/stream" sse-swap="log" hx-swap="beforeend"></div>
+</section>
+<script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+{{ end }}

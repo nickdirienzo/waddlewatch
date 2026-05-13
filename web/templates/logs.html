@@ -1,0 +1,27 @@
+{{ define "content" }}
+<form class="filters"
+      hx-get="/logs/rows"
+      hx-target="#logs-rows"
+      hx-trigger="submit, change from:#service, keyup changed delay:400ms from:#search">
+  <label>From (UTC RFC3339)
+    <input type="text" name="from" value="{{ .From }}" placeholder="2026-05-13T10:00:00Z">
+  </label>
+  <label>To (UTC RFC3339)
+    <input type="text" name="to" value="{{ .To }}" placeholder="2026-05-13T11:00:00Z">
+  </label>
+  <label>Service
+    <select id="service" name="service">
+      <option value="">all</option>
+      {{ range .Services }}<option value="{{ . }}" {{ if eq . $.Service }}selected{{ end }}>{{ . }}</option>{{ end }}
+    </select>
+  </label>
+  <label>Body contains
+    <input id="search" type="text" name="search" value="{{ .Search }}" placeholder="error timeout">
+  </label>
+  <button type="submit">Search</button>
+</form>
+
+<div id="logs-rows" hx-get="/logs/rows{{ .Query }}" hx-trigger="load">
+  <div class="summary">loading…</div>
+</div>
+{{ end }}
