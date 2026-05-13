@@ -39,7 +39,7 @@ func Default() Config {
 	return Config{
 		Listen:       "127.0.0.1:8080",
 		StoragePath:  "/var/lib/waddlewatch/parquet",
-		CatalogPath:  "/var/lib/waddlewatch/catalog.sqlite",
+		CatalogPath:  "/var/lib/waddlewatch/catalog.duckdb",
 		DataPath:     "/var/lib/waddlewatch/data",
 		PollInterval: 60 * time.Second,
 	}

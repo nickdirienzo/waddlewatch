@@ -29,7 +29,7 @@ mkdir -p /tmp/wdw/parquet /tmp/wdw/data
 cat > /tmp/wdw/config.yaml <<'YAML'
 listen: 127.0.0.1:8080
 storage_path: /tmp/wdw/parquet
-catalog_path: /tmp/wdw/catalog.sqlite
+catalog_path: /tmp/wdw/catalog.duckdb
 data_path: /tmp/wdw/data
 poll_interval: 3s
 YAML
@@ -87,11 +87,11 @@ auth-proxy you already trust.
 
 ## Resetting state
 
-The catalog is a single SQLite file plus the DuckLake data directory. To start
+The catalog is a single DuckDB file plus the DuckLake data directory. To start
 fresh:
 
 ```bash
-rm -rf /tmp/wdw/catalog.sqlite /tmp/wdw/data
+rm -rf /tmp/wdw/catalog.duckdb /tmp/wdw/data
 ```
 
 Your raw parquet files in `storage_path` are untouched. The next poll will

@@ -23,7 +23,7 @@ func TestLoadYAML(t *testing.T) {
 	body := `
 listen: 0.0.0.0:9000
 storage_path: /tmp/parquet
-catalog_path: /tmp/catalog.sqlite
+catalog_path: /tmp/catalog.duckdb
 data_path: /tmp/data
 poll_interval: 5s
 `

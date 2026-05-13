@@ -114,7 +114,7 @@ func ensureDirs(cfg config.Config) error {
 			return fmt.Errorf("creating %s: %w", d, err)
 		}
 	}
-	// Catalog file directory must exist before DuckLake opens the SQLite file.
+	// Catalog file directory must exist before DuckLake opens the DuckDB file.
 	if cfg.CatalogPath != "" {
 		if err := os.MkdirAll(parentDir(cfg.CatalogPath), 0o755); err != nil {
 			return fmt.Errorf("creating catalog dir: %w", err)

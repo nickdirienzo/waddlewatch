@@ -40,7 +40,7 @@ echo "[demo] building binaries..."
 cat > "$config" <<EOF
 listen: 127.0.0.1:$PORT
 storage_path: $SCRATCH/parquet
-catalog_path: $SCRATCH/catalog.sqlite
+catalog_path: $SCRATCH/catalog.duckdb
 data_path: $SCRATCH/data
 poll_interval: $INTERVAL
 EOF

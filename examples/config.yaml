@@ -7,9 +7,9 @@ listen: 127.0.0.1:8080
 # subdirectories. Waddlewatch polls the tree on a timer.
 storage_path: /var/lib/waddlewatch/parquet
 
-# DuckLake catalog (SQLite-backed) plus the directory where DuckLake puts its
+# DuckLake catalog (DuckDB-backed) plus the directory where DuckLake puts its
 # internal data files. Both must live on a persistent volume.
-catalog_path: /var/lib/waddlewatch/catalog.sqlite
+catalog_path: /var/lib/waddlewatch/catalog.duckdb
 data_path: /var/lib/waddlewatch/data
 
 # How often to scan storage_path for new parquet files.

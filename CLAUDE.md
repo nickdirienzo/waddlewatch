@@ -2,7 +2,7 @@
 
 ## What this project is
 
-A self-hosted observability tool. Ingests OpenTelemetry data via Vector. Stores it as Parquet files registered in a DuckLake catalog. Serves an htmx-based web UI for querying. Single Go binary. Single config file.
+A self-hosted observability tool. Ingests OpenTelemetry data via Vector. Stores it as Parquet files registered in a DuckLake catalog (DuckDB-backed). Serves an htmx-based web UI for querying. Single Go binary. Single config file.
 
 ## Project goals (in order)
 
@@ -30,13 +30,13 @@ Three components:
    - Background goroutine: polls the parquet output directory on a timer (default 60s). For any new files, calls `ducklake_add_data_files(catalog, table, file_path)` to register them.
    - HTTP server: serves an htmx-driven UI. Executes queries against DuckDB attached to the DuckLake catalog. Returns HTML fragments.
 
-3. **Storage**. Parquet files on local disk or S3. DuckLake catalog as a SQLite file alongside the Parquet.
+3. **Storage**. Parquet files on local disk or S3. DuckLake catalog as a DuckDB file alongside the Parquet.
 
 ## Tech stack and why
 
 - **Go 1.23+**. Single binary deployment, simple ops, fits boring-infra-tool aesthetic.
 - **DuckDB via go-duckdb** (`github.com/marcboeker/go-duckdb`). Query engine, embedded in the binary, no separate service to run.
-- **DuckLake**. Catalog format that tracks parquet files. SQLite-backed catalog for v1 (zero ops).
+- **DuckLake**. Catalog format that tracks parquet files. DuckDB-backed catalog for v1 (one engine, one file format, zero extra ops).
 - **htmx + html/template**. Server-rendered HTML. No JS toolchain. No build step. Templates in `web/templates/`.
 - **chi router** (`github.com/go-chi/chi/v5`). Lightweight HTTP routing.
 - **YAML config** (`gopkg.in/yaml.v3`). Readable config with env var overrides.
@@ -90,7 +90,7 @@ Embed `web/templates/` and `web/static/` via `go:embed` so the binary is self-co
 ## What to build first (v1 scope)
 
 1. Config schema and loader in `internal/config/`. Fields: storage path or S3 bucket, catalog path, HTTP listen addr, poll interval.
-2. Catalog operations in `internal/catalog/`. Attach DuckLake. Idempotent `ducklake_add_data_files`. Track seen-files state (in a tiny SQLite table or in-memory map with persistent checkpoint).
+2. Catalog operations in `internal/catalog/`. Attach DuckLake. Idempotent `ducklake_add_data_files`. Track seen-files state via DuckLake's own metadata (`ducklake_list_files`) on startup.
 3. Ingest loop in `internal/ingest/`. Polls storage path on a ticker. New files get registered via catalog package.
 4. HTTP server in `internal/server/` with these routes:
    - `GET /` landing page, links to logs/metrics/traces
@@ -107,7 +107,7 @@ Embed `web/templates/` and `web/static/` via `go:embed` so the binary is self-co
 
 - Don't add authentication. Bind to localhost or trusted networks only.
 - Don't write a custom chart library. Use Chart.js via CDN.
-- Don't add Postgres support for the catalog. SQLite only.
+- Don't add Postgres or SQLite support for the catalog. DuckDB only.
 - Don't build a trace waterfall. Flat table sorted by `start_time` is fine.
 - Don't add alerting, notification, or paging.
 - Don't add an ORM or query builder. Raw SQL via DuckDB.

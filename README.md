@@ -12,7 +12,7 @@ The whole stack is intentionally boring:
 
 - One Go binary
 - One config file
-- One catalog file (SQLite)
+- One catalog file (DuckDB)
 - Parquet files on disk or in S3
 
 Your data lives in open files. You can query it with anything that reads Parquet, with or without Waddlewatch running. The binary is doing accounting, not data storage.
@@ -67,7 +67,7 @@ A full setup walkthrough lives in [docs/setup.md](docs/setup.md).
 
 - **Ingest**: Vector (external, not part of this repo)
 - **Storage**: Parquet files on disk or S3
-- **Catalog**: DuckLake, SQLite-backed by default
+- **Catalog**: DuckLake, DuckDB-file backed
 - **Query**: DuckDB embedded in the binary
 - **UI**: htmx, html/template, a touch of Chart.js
 - **Binary**: Go

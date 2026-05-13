@@ -6,6 +6,8 @@
 # Demo / test scratch
 /.demo/
 /tmp/
+*.duckdb
+*.duckdb.wal
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal

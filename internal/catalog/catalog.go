@@ -66,9 +66,7 @@ func Open(ctx context.Context, opts Options) (*Store, error) {
 	bootstrap := []string{
 		"INSTALL ducklake",
 		"LOAD ducklake",
-		"INSTALL sqlite",
-		"LOAD sqlite",
-		fmt.Sprintf("ATTACH 'ducklake:sqlite:%s' AS waddlewatch (DATA_PATH '%s')",
+		fmt.Sprintf("ATTACH 'ducklake:duckdb:%s' AS waddlewatch (DATA_PATH '%s')",
 			escape(opts.CatalogPath), escape(opts.DataPath)),
 		"USE waddlewatch",
 	}
