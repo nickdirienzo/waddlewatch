@@ -1,8 +1,10 @@
 # Binaries
 /waddlewatch
+/waddlewatch-demo
 /dist/
 
-# Test scratch
+# Demo / test scratch
+/.demo/
 /tmp/
 *.sqlite
 *.sqlite-shm
